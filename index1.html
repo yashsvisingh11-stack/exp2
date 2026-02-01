@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Tool Project</title>
+    <style>
+        /* Shared and Navigation Styles */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f4f4;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: #2c3e50;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        nav a:hover, nav a.active-link {
+            background: #34495e;
+            color: #28a745;
+        }
+
+        /* Logic for switching "pages" */
+        .page-content {
+            display: none; /* Hidden by default */
+            padding: 20px;
+        }
+
+        .page-content.active {
+            display: block; /* Only show active section */
+        }
+
+        /* --- STYLES FROM SVG TOOL --- */
+        .toolbar { padding: 15px; background: #34495e; color: white; display: flex; gap: 20px; align-items: center; justify-content: center; border-radius: 8px 8px 0 0; }
+        #svgCanvas { width: 90vw; height: 60vh; display: block; margin: auto; background: white; border: 2px solid #34495e; border-radius: 0 0 8px 8px; cursor: crosshair; touch-action: none; }
+        .btn-undo { padding: 8px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; }
+
+        /* --- STYLES FROM PRODUCT FILTER --- */
+        .catalog-container { max-width: 900px; margin: auto; text-align: center; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin-top: 20px; }
+        .product-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .product-card img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; }
+
+        /* --- STYLES FROM CHARACTER COUNTER --- */
+        .counter-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 70vh; }
+        .counter-card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+        textarea { width: 300px; height: 150px; padding: 10px; border: 2px solid #ddd; border-radius: 5px; resize: none; }
+    </style>
+</head>
+<body>
+
+    <nav id="main-nav">
+        <a data-target="drawing-tool" class="active-link">SVG Drawer</a>
+        <a data-target="product-catalog">Product Catalog</a>
+        <a data-target="char-counter">Char Counter</a>
+    </nav>
+
+    <div id="drawing-tool" class="page-content active">
+        <div class="toolbar">
+            <label>Pick Color:</label>
+            <input type="color" id="colorPicker" value="#28a745">
+            <button class="btn-undo" id="undoBtn">Undo</button>
+            <span>Canvas - Drag to Draw!</span>
+        </div>
+        <svg id="svgCanvas" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div id="product-catalog" class="page-content">
+        <div class="catalog-container">
+            <h2>Product Catalog</h2>
+            <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 10px; display: inline-block;">
+                <label>Sort by Price:</label>
+                <select id="sort-dropdown">
+                    <option value="default">Select...</option>
+                    <option value="low">Low to High</option>
+                    <option value="high">High to Low</option>
+                </select>
+            </div>
+            <div class="product-grid" id="product-list">
+                <div class="product-card" data-price="25">
+                    <img src="https://images.unsplash.com/photo-1628832307345-7404b47f1751?q=80&w=2083&auto=format&fit=crop" alt="Mouse">
+                    <h3>Wireless Mouse</h3><p>$25</p>
+                </div>
+                <div class="product-card" data-price="10">
+                    <img src="https://images.unsplash.com/photo-1572721546624-05bf65ad7679?q=80&w=1073&auto=format&fit=crop" alt="USB Cable">
+                    <h3>USB Cable</h3><p>$10</p>
+                </div>
+                <div class="product-card" data-price="550">
+                    <img src="https://images.unsplash.com/photo-1591370874773-6702e8f12fd8?q=80&w=1074&auto=format&fit=crop" alt="Monitor">
+                    <h3>Monitor</h3><p>$550</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="char-counter" class="page-content">
+        <div class="counter-wrapper">
+            <div class="counter-card">
+                <h2>Character Counter</h2>
+                <textarea id="myText" placeholder="Start typing..."></textarea>
+                <p>Count: <span id="count" style="color:#007bff; font-weight:bold;">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- NAVIGATION LOGIC ---
+        const navLinks = document.querySelectorAll('#main-nav a');
+        const pages = document.querySelectorAll('.page-content');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const targetId = link.getAttribute('data-target');
+                
+                // Update active link style
+                navLinks.forEach(l => l.classList.remove('active-link'));
+                link.classList.add('active-link');
+
+                // Switch pages
+                pages.forEach(page => {
+                    page.classList.remove('active');
+                    if(page.id === targetId) page.classList.add('active');
+                });
+            });
+        });
+
+        // --- SVG TOOL LOGIC ---
+        const svg = document.getElementById('svgCanvas');
+        const colorPicker = document.getElementById('colorPicker');
+        const undoBtn = document.getElementById('undoBtn');
+        let isDrawing = false;
+        svg.addEventListener('mousedown', () => isDrawing = true);
+        window.addEventListener('mouseup', () => isDrawing = false);
+        svg.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = svg.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", x); circle.setAttribute("cy", y);
+            circle.setAttribute("r", "0.8"); circle.setAttribute("fill", colorPicker.value);
+            svg.appendChild(circle);
+        });
+        undoBtn.addEventListener('click', () => { if (svg.lastChild) svg.removeChild(svg.lastChild); });
+
+        // --- CATALOG LOGIC ---
+        const dropdown = document.getElementById('sort-dropdown');
+        const productList = document.getElementById('product-list');
+        const products = Array.from(document.getElementsByClassName('product-card'));
+        dropdown.addEventListener('change', function() {
+            if (this.value === 'default') return;
+            const sorted = products.sort((a, b) => {
+                const priceA = parseInt(a.getAttribute('data-price'));
+                const priceB = parseInt(b.getAttribute('data-price'));
+                return this.value === 'low' ? priceA - priceB : priceB - priceA;
+            });
+            sorted.forEach(card => productList.appendChild(card));
+        });
+
+        // --- COUNTER LOGIC ---
+        const textarea = document.getElementById('myText');
+        const countDisplay = document.getElementById('count');
+        textarea.addEventListener('input', () => {
+            countDisplay.textContent = textarea.value.length;
+        });
+    </script>
+</body>
+</html>
